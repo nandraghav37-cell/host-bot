@@ -15,7 +15,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 # Allowed channels for commands
 ALLOWED_CHANNELS = ['bot-chat', 'emperor-ship']  # Channel names (lowercase)
@@ -269,8 +269,8 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
         await ctx.send(f"❌ Only the bot owner can use this command! 👑")
 
-@bot.command(name='help', help='Show all commands')
-async def help_command(ctx):
+@bot.command(name='myhelp', help='Show all commands')
+async def myhelp(ctx):
     if not is_allowed_channel(ctx.channel):
         return
     
