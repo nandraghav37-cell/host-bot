@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+OWNER_ID = int(os.getenv('OWNER_ID', '0'))  # Add your Discord ID in .env
 
 # Bot setup
 intents = discord.Intents.default()
@@ -32,10 +33,15 @@ def is_allowed_channel(channel):
     """Check if message is in allowed channels"""
     return channel.name.lower() in ALLOWED_CHANNELS
 
+def is_owner(ctx):
+    """Check if user is the bot owner"""
+    return ctx.author.id == OWNER_ID
+
 @bot.event
 async def on_ready():
     print(f'✅ Bot logged in as {bot.user}')
     print(f'🎮 Bot is ready to moderate!')
+    print(f'👑 Owner ID: {OWNER_ID}')
 
 @bot.event
 async def on_message(message):
@@ -164,15 +170,12 @@ async def guess(ctx):
             await ctx.send(f"⏱️ Time's up! The number was **{secret}**")
             return
 
-# ============ MODERATION COMMANDS ============
+# ============ MODERATION COMMANDS (OWNER ONLY) ============
 
-@bot.command(name='timeout', help='Timeout a user (!timeout @user [minutes])')
+@bot.command(name='timeout', help='Timeout a user (!timeout @user [minutes]) - OWNER ONLY')
+@commands.check(is_owner)
 async def timeout(ctx, member: discord.Member, minutes: int = 1):
     if not is_allowed_channel(ctx.channel):
-        return
-    
-    if not ctx.author.guild_permissions.moderate_members:
-        await ctx.send("❌ You don't have permission to timeout members!")
         return
     
     try:
@@ -181,13 +184,10 @@ async def timeout(ctx, member: discord.Member, minutes: int = 1):
     except Exception as e:
         await ctx.send(f"❌ Error: {e}")
 
-@bot.command(name='ban', help='Ban a user (!ban @user [reason])')
+@bot.command(name='ban', help='Ban a user (!ban @user [reason]) - OWNER ONLY')
+@commands.check(is_owner)
 async def ban(ctx, member: discord.Member, *, reason="No reason"):
     if not is_allowed_channel(ctx.channel):
-        return
-    
-    if not ctx.author.guild_permissions.ban_members:
-        await ctx.send("❌ You don't have permission to ban members!")
         return
     
     try:
@@ -196,13 +196,10 @@ async def ban(ctx, member: discord.Member, *, reason="No reason"):
     except Exception as e:
         await ctx.send(f"❌ Error: {e}")
 
-@bot.command(name='kick', help='Kick a user (!kick @user [reason])')
+@bot.command(name='kick', help='Kick a user (!kick @user [reason]) - OWNER ONLY')
+@commands.check(is_owner)
 async def kick(ctx, member: discord.Member, *, reason="No reason"):
     if not is_allowed_channel(ctx.channel):
-        return
-    
-    if not ctx.author.guild_permissions.kick_members:
-        await ctx.send("❌ You don't have permission to kick members!")
         return
     
     try:
@@ -211,13 +208,10 @@ async def kick(ctx, member: discord.Member, *, reason="No reason"):
     except Exception as e:
         await ctx.send(f"❌ Error: {e}")
 
-@bot.command(name='mute', help='Mute a user')
+@bot.command(name='mute', help='Mute a user - OWNER ONLY')
+@commands.check(is_owner)
 async def mute(ctx, member: discord.Member):
     if not is_allowed_channel(ctx.channel):
-        return
-    
-    if not ctx.author.guild_permissions.manage_roles:
-        await ctx.send("❌ You don't have permission to mute members!")
         return
     
     try:
@@ -230,13 +224,10 @@ async def mute(ctx, member: discord.Member):
     except Exception as e:
         await ctx.send(f"❌ Error: {e}")
 
-@bot.command(name='unmute', help='Unmute a user')
+@bot.command(name='unmute', help='Unmute a user - OWNER ONLY')
+@commands.check(is_owner)
 async def unmute(ctx, member: discord.Member):
     if not is_allowed_channel(ctx.channel):
-        return
-    
-    if not ctx.author.guild_permissions.manage_roles:
-        await ctx.send("❌ You don't have permission to unmute members!")
         return
     
     try:
@@ -249,13 +240,10 @@ async def unmute(ctx, member: discord.Member):
     except Exception as e:
         await ctx.send(f"❌ Error: {e}")
 
-@bot.command(name='warn', help='Warn a user (!warn @user [reason])')
+@bot.command(name='warn', help='Warn a user (!warn @user [reason]) - OWNER ONLY')
+@commands.check(is_owner)
 async def warn(ctx, member: discord.Member, *, reason="No reason"):
     if not is_allowed_channel(ctx.channel):
-        return
-    
-    if not ctx.author.guild_permissions.moderate_members:
-        await ctx.send("❌ You don't have permission to warn members!")
         return
     
     user_id = member.id
@@ -275,6 +263,12 @@ async def warn(ctx, member: discord.Member, *, reason="No reason"):
             await ctx.send(f"❌ Could not kick {member.mention}")
         warn_system[user_id] = 0
 
+# Error handler for permission check
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send(f"❌ Only the bot owner can use this command! 👑")
+
 @bot.command(name='help', help='Show all commands')
 async def help_command(ctx):
     if not is_allowed_channel(ctx.channel):
@@ -282,14 +276,14 @@ async def help_command(ctx):
     
     embed = discord.Embed(title="🤖 Bot Commands", color=discord.Color.blue())
     
-    embed.add_field(name="🎮 Games", value=
+    embed.add_field(name="🎮 Games (Everyone)", value=
         "• `!ping` - Check latency\n"
         "• `!hello` - Say hello\n"
         "• `!roll` - Roll a dice\n"
         "• `!rps rock/paper/scissors` - Rock-Paper-Scissors\n"
         "• `!guess` - Number guessing game", inline=False)
     
-    embed.add_field(name="🛡️ Moderation", value=
+    embed.add_field(name="🛡️ Moderation (OWNER ONLY 👑)", value=
         "• `!timeout @user [minutes]` - Timeout user\n"
         "• `!ban @user [reason]` - Ban user\n"
         "• `!kick @user [reason]` - Kick user\n"
@@ -297,7 +291,7 @@ async def help_command(ctx):
         "• `!unmute @user` - Unmute user\n"
         "• `!warn @user [reason]` - Warn user", inline=False)
     
-    embed.add_field(name="🚫 Auto-Moderation", value=
+    embed.add_field(name="🚫 Auto-Moderation (Automatic)", value=
         "• ⏱️ Abusive words = 1 min timeout\n"
         "• 🚫 Links = Delete + Warning\n"
         "• 3 warnings = Auto kick", inline=False)
