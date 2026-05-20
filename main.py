@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
+TOKEN = os.getenv('Discord-Token')  # Match Railway variable name exactly
 OWNER_ID = int(os.getenv('OWNER_ID', '0'))  # Add your Discord ID in .env
 
 # Bot setup
